@@ -20,6 +20,7 @@ import { buildDashboardSummary } from "../services/dashboardService";
 import { nextBestAction, learningInsights } from "../data/adaptiveMock";
 import { overallSkillTimeline } from "../data/topicSkills";
 import { getCareerById } from "../data/careers";
+import WelcomeBackNudge from "../components/WelcomeBackNudge";
 import { useApp } from "../App";
 
 export default function Dashboard() {
@@ -78,6 +79,13 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Welcome-Back Smart Nudge — appears when returning after long inactivity */}
+      <WelcomeBackNudge
+        skills={state.skills || []}
+        activityTimeline={state.activityTimeline || []}
+        userName={state.profile?.name || state.user?.name || "Student"}
+      />
 
       {/* Prominent "Next Best Action" (Section 13 & 26) */}
       <div className="mb-8">

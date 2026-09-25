@@ -19,6 +19,7 @@ import Dashboard from "./pages/Dashboard";
 import AdaptiveRoadmap from "./pages/AdaptiveRoadmap";
 import LearningHistory from "./pages/LearningHistory";
 import LearningInsights from "./pages/LearningInsights";
+import KnowledgeRefresh from "./pages/KnowledgeRefresh";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/career-readiness" element={<ProtectedRoute><CareerReadiness /></ProtectedRoute>} />
         <Route path="/adaptive-roadmap" element={<ProtectedRoute><AdaptiveRoadmap /></ProtectedRoute>} />
         <Route path="/learning-insights" element={<ProtectedRoute><LearningInsights /></ProtectedRoute>} />
+        <Route path="/knowledge-refresh" element={<ProtectedRoute><KnowledgeRefresh /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

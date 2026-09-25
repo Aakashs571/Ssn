@@ -131,3 +131,63 @@ export const careerReadinessBreakdown = {
     },
   ],
 };
+
+// Knowledge Decay Predictions — pre-computed decay risk indicators for each skill.
+// Used alongside the live knowledgeDecay.js engine for enriched AI-style recommendations.
+export const knowledgeDecayPredictions = [
+  {
+    skillId: "javascript",
+    skillName: "JavaScript",
+    stability: 0.88,
+    decayRisk: "Low",
+    halfLifeDays: 180,
+    projectedScoreIn30Days: 68,
+    projectedScoreIn90Days: 58,
+    projectedScoreIn180Days: 45,
+    recommendation: "Strong foundation — periodic quick quizzes will maintain retention.",
+  },
+  {
+    skillId: "react",
+    skillName: "React",
+    stability: 0.84,
+    decayRisk: "Moderate",
+    halfLifeDays: 120,
+    projectedScoreIn30Days: 58,
+    projectedScoreIn90Days: 42,
+    projectedScoreIn180Days: 28,
+    recommendation: "Active practice needed — build a small side project every month.",
+  },
+  {
+    skillId: "nodejs",
+    skillName: "Node.js",
+    stability: 0.65,
+    decayRisk: "High",
+    halfLifeDays: 60,
+    projectedScoreIn30Days: 22,
+    projectedScoreIn90Days: 10,
+    projectedScoreIn180Days: 4,
+    recommendation: "High decay risk — schedule weekly backend exercises to retain knowledge.",
+  },
+  {
+    skillId: "sql",
+    skillName: "SQL",
+    stability: 0.82,
+    decayRisk: "Low",
+    halfLifeDays: 180,
+    projectedScoreIn30Days: 66,
+    projectedScoreIn90Days: 56,
+    projectedScoreIn180Days: 43,
+    recommendation: "Solid retention — monthly SQL challenges will keep skills sharp.",
+  },
+  {
+    skillId: "git",
+    skillName: "Git",
+    stability: 0.90,
+    decayRisk: "Minimal",
+    halfLifeDays: 365,
+    projectedScoreIn30Days: 79,
+    projectedScoreIn90Days: 76,
+    projectedScoreIn180Days: 72,
+    recommendation: "Deeply encoded through daily use — minimal decay expected.",
+  },
+];
