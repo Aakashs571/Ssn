@@ -143,18 +143,127 @@ ORDER BY total_revenue DESC;`,
     title: "Implement a fluid responsive pricing table",
     task: "Create a modern 3-tier pricing card layout using CSS Grid and Flexbox that transitions cleanly across screen sizes.",
     concepts: ["CSS Grid", "Flexbox", "Media Queries", "Card Layout"],
-    starterCode: `.pricing-grid {
+    starterCode: `/* ─── 1. Grid Container (CSS Grid for column placement) ─── */
+.pricing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
+  width: 100%;
 }
+
+/* ─── 2. Pricing Card (Flexbox for equal heights & vertical flow) ─── */
 .pricing-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-radius: 14px;
+  border-radius: 16px;
+  padding: 1.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-card.featured {
+  border: 2px solid #0d9488;
+  position: relative;
+}
+
+/* ─── 3. Card Internal Elements ─── */
+.pricing-card .card-header {
+  margin-bottom: 1.25rem;
+}
+
+.pricing-card .plan-price {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0.5rem 0;
+}
+
+.pricing-card .features {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+  flex-grow: 1; /* Pushes button to bottom */
+}
+
+.pricing-card .features li {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pricing-card .plan-btn {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  margin-top: 1rem;
+}
+
+.pricing-card.featured .plan-btn {
+  background: #0d9488;
 }`,
-    requirements: ["Use CSS Grid for column placement", "Use Flexbox inside cards for equal heights", "Ensure responsiveness without horizontal scroll"],
+    htmlTemplate: `<div class="pricing-grid">
+  <div class="pricing-card">
+    <div class="card-header">
+      <span class="text-xs uppercase font-bold text-slate-500">Starter</span>
+      <h3 class="text-lg font-bold text-slate-900 mt-0.5">Basic Tier</h3>
+      <div class="plan-price">$19<span class="text-sm font-normal text-slate-500">/mo</span></div>
+    </div>
+    <ul class="features">
+      <li>✓ Up to 5 team members</li>
+      <li>✓ 10 GB cloud workspace</li>
+      <li>✓ Standard analytics</li>
+    </ul>
+    <button class="plan-btn">Choose Basic</button>
+  </div>
+
+  <div class="pricing-card featured">
+    <div class="card-header">
+      <span class="text-xs uppercase font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Most Popular</span>
+      <h3 class="text-lg font-bold text-slate-900 mt-1">Professional</h3>
+      <div class="plan-price">$49<span class="text-sm font-normal text-slate-500">/mo</span></div>
+    </div>
+    <ul class="features">
+      <li>✓ Unlimited team members</li>
+      <li>✓ 100 GB cloud workspace</li>
+      <li>✓ Real-time telemetry</li>
+      <li>✓ 24/7 Priority support</li>
+    </ul>
+    <button class="plan-btn">Choose Pro</button>
+  </div>
+
+  <div class="pricing-card">
+    <div class="card-header">
+      <span class="text-xs uppercase font-bold text-slate-500">Enterprise</span>
+      <h3 class="text-lg font-bold text-slate-900 mt-0.5">Scale Tier</h3>
+      <div class="plan-price">$99<span class="text-sm font-normal text-slate-500">/mo</span></div>
+    </div>
+    <ul class="features">
+      <li>✓ Dedicated account manager</li>
+      <li>✓ Custom SLA & enterprise SSO</li>
+      <li>✓ Unlimited audit retention</li>
+    </ul>
+    <button class="plan-btn">Contact Sales</button>
+  </div>
+</div>`,
+    requirements: [
+      "Use CSS Grid for column placement",
+      "Use Flexbox inside cards for equal heights",
+      "Ensure responsiveness without horizontal scroll",
+    ],
     expectedOutput: "A fluid responsive 3-column pricing grid.",
     evaluationCriteria: ["CSS Grid", "Flexbox", "Media Queries", "Card Layout"],
   },

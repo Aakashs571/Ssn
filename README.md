@@ -1,4 +1,4 @@
-# SkillPath AI — Frontend
+# GapForge — Frontend
 
 An adaptive career-learning platform frontend. React + Vite + Tailwind CSS + React Router + Recharts.
 

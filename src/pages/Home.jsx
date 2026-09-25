@@ -22,7 +22,7 @@ export default function Home() {
     <div>
       <header className="flex items-center justify-between px-4 lg:px-8 h-16">
         <span className="font-display font-extrabold text-lg text-ink-900">
-          SkillPath <span className="text-teal-600">AI</span>
+          Gap<span className="text-teal-600">Forge</span>
         </span>
         <button onClick={startDemo} className="text-sm font-semibold text-ink-600 hover:text-ink-900 focus-ring rounded">
           View Demo
@@ -30,12 +30,12 @@ export default function Home() {
       </header>
 
       <section className="px-4 lg:px-8 pt-12 pb-20 max-w-3xl mx-auto text-center">
-        <p className="text-sm font-semibold text-teal-600 mb-4">SkillPath AI</p>
+        <p className="text-sm font-semibold text-teal-600 mb-4">GapForge</p>
         <h1 className="font-display font-extrabold text-4xl lg:text-5xl text-ink-950 leading-tight">
           Find your skill gaps. Build your career path.
         </h1>
         <p className="text-ink-600 mt-5 text-lg leading-relaxed max-w-xl mx-auto">
-          SkillPath AI identifies what skills you're missing, helps you learn them, tests your practical ability,
+          GapForge identifies what skills you're missing, helps you learn them, tests your practical ability,
           and continuously adapts your learning path as you grow.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
@@ -59,7 +59,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-line py-8 px-4 lg:px-8 text-center text-xs text-ink-500">
-        SkillPath AI doesn't give every student the same learning path — it changes based on what you actually know and can do.
+        GapForge doesn't give every student the same learning path — it changes based on what you actually know and can do.
       </footer>
     </div>
   );

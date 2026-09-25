@@ -25,9 +25,9 @@ export default function SkillProfile() {
     return (
       <Layout>
         <EmptyState
-          title="Complete your first assessment"
-          message="Complete your diagnostic assessment to build your multi-evidence skill profile."
-          action={<Button variant="accent" onClick={() => navigate("/assessment")}>Take assessment</Button>}
+          title="Build your skill profile"
+          message="Learn on the roadmap and raise career readiness above 80% to unlock the benchmark assessment."
+          action={<Button variant="accent" onClick={() => navigate("/roadmap")}>Open roadmap</Button>}
         />
       </Layout>
     );

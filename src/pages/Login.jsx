@@ -32,12 +32,6 @@ export default function Login() {
     }
   };
 
-  const fillDemo = () => {
-    setEmail("alex@example.com");
-    setPassword("password123");
-    setError(null);
-  };
-
   return (
     <div className="auth-page">
       {/* Animated background blobs */}
@@ -50,7 +44,7 @@ export default function Login() {
       {/* Logo / Brand */}
       <div className="auth-brand">
         <Link to="/" className="auth-logo">
-          SkillPath <span>AI</span>
+          Gap<span>Forge</span>
         </Link>
       </div>
 
@@ -63,15 +57,6 @@ export default function Login() {
             <h1 className="auth-title">Welcome back</h1>
             <p className="auth-subtitle">Sign in to continue your learning journey</p>
           </div>
-
-          {/* Demo helper */}
-          <button type="button" onClick={fillDemo} className="auth-demo-btn">
-            <span className="auth-demo-icon">⚡</span>
-            <span>
-              <strong>Try Demo Account</strong>
-              <span className="auth-demo-hint">alex@example.com / password123</span>
-            </span>
-          </button>
 
           {/* Error */}
           {error && (
@@ -151,7 +136,7 @@ export default function Login() {
             <div className="auth-side-tag">Adaptive Learning</div>
             <h2 className="auth-side-title">Your personalized career roadmap awaits</h2>
             <p className="auth-side-body">
-              SkillPath AI identifies your skill gaps, builds a custom learning path, and adapts as you grow — all powered by AI.
+              GapForge identifies your skill gaps, builds a custom learning path, and adapts as you grow — all powered by AI.
             </p>
             <ul className="auth-features">
               <li><span className="auth-feature-dot" />AI-powered skill gap analysis</li>

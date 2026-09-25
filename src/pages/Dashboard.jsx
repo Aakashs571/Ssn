@@ -36,7 +36,7 @@ export default function Dashboard() {
     return (
       <Layout>
         <EmptyState
-          title="Welcome to SkillPath AI"
+          title="Welcome to GapForge"
           message="Create your profile to start your personalized learning journey."
           action={<Button variant="accent" onClick={() => navigate("/profile")}>Create profile</Button>}
         />

@@ -20,7 +20,7 @@ export default function Careers() {
   const handleContinue = () => {
     if (!selected) return;
     update({ selectedCareer: selected });
-    navigate("/assessment");
+    navigate("/roadmap");
   };
 
   const handleViewRoadmap = (careerId) => {

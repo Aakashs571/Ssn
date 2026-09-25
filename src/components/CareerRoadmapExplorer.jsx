@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { getCareerRoadmap, getAllCareerRoadmaps } from "../data/careerRoadmaps";
 import { careers } from "../data/careers";
+import { isAssessmentUnlocked } from "../utils/skillCalculations";
 import ProgressBar from "./ProgressBar";
 
 const categoryColors = {
@@ -64,12 +65,12 @@ export default function CareerRoadmapExplorer({
 
     requiredSkills.forEach((req) => {
       const userSkill = userSkillMap[req.skillId];
-      const cur = userSkill ? userSkill.currentScore : 0;
+      const cur = userSkill ? Math.min(100, Math.max(0, userSkill.currentScore)) : 0;
       totalScore += cur;
       if (cur >= req.requiredScore) completedSkills += 1;
     });
 
-    const avgScore = requiredSkills.length ? Math.round(totalScore / requiredSkills.length) : 0;
+    const avgScore = requiredSkills.length ? Math.min(100, Math.round(totalScore / requiredSkills.length)) : 0;
 
     return {
       avgScore,
@@ -216,16 +217,31 @@ export default function CareerRoadmapExplorer({
                     <span>🎓</span>
                     <span>Credit Outside Course</span>
                   </button>
-                  <button
-                    onClick={() => onStartAssessment(roadmap.careerId)}
-                    className={`w-full py-2 px-3 text-xs font-semibold rounded-lg transition-colors border ${
-                      hasCompletedCourse
-                        ? "text-ink-700 bg-paper hover:bg-line/40 border-line"
-                        : "text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-200"
-                    }`}
-                  >
-                    {hasCompletedCourse ? "Take Career Assessment" : "🔒 Complete Course to Unlock Assessment"}
-                  </button>
+                  {(() => {
+                    const careerDef = careers.find((c) => c.id === roadmap.careerId);
+                    const isUnlocked = isAssessmentUnlocked(userSkills, careerDef);
+                    const currentReadiness = careerStats ? careerStats.avgScore : 0;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isUnlocked) {
+                            onStartAssessment(roadmap.careerId);
+                          }
+                        }}
+                        disabled={!isUnlocked}
+                        className={`w-full py-2 px-3 text-xs font-semibold rounded-lg transition-colors border ${
+                          isUnlocked
+                            ? "text-ink-700 bg-paper hover:bg-line/40 border-line cursor-pointer"
+                            : "text-amber-900 bg-amber-50 border-amber-300 cursor-not-allowed opacity-90"
+                        }`}
+                      >
+                        {isUnlocked
+                          ? "Take Career Assessment →"
+                          : `🔒 Reach above 80% to unlock (${currentReadiness}%)`}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             ) : (
@@ -368,8 +384,8 @@ export default function CareerRoadmapExplorer({
           // Adaptively sort skills in this phase: skills with biggest gap come first
           const displayedSkills = isAdaptive
             ? [...phase.skills].sort((a, b) => {
-                const curA = userSkillMap[a.skillId]?.currentScore ?? 0;
-                const curB = userSkillMap[b.skillId]?.currentScore ?? 0;
+                const curA = Math.min(100, Math.max(0, userSkillMap[a.skillId]?.currentScore ?? 0));
+                const curB = Math.min(100, Math.max(0, userSkillMap[b.skillId]?.currentScore ?? 0));
                 const gapA = Math.max(0, a.targetScore - curA);
                 const gapB = Math.max(0, b.targetScore - curB);
                 return gapB - gapA;
@@ -435,7 +451,7 @@ export default function CareerRoadmapExplorer({
                   {displayedSkills.map((skill) => {
                     const userSkill = userSkillMap[skill.skillId];
                     const hasUserScore = isUserTarget && userSkill !== undefined;
-                    const curScore = hasUserScore ? userSkill.currentScore : null;
+                    const curScore = hasUserScore ? Math.min(100, Math.max(0, Math.round(userSkill.currentScore))) : null;
                     const meetsTarget = curScore !== null && curScore >= skill.targetScore;
 
                     return (
@@ -470,7 +486,7 @@ export default function CareerRoadmapExplorer({
                               <div className="flex justify-between text-[11px] mb-1">
                                 <span className="text-ink-600 font-medium">Your Score</span>
                                 <span className={`font-bold ${meetsTarget ? "text-teal-600" : "text-amber-600"}`}>
-                                  {curScore}% {meetsTarget ? "✓ Mastered" : `(${skill.targetScore - curScore}% gap)`}
+                                  {curScore}% {meetsTarget ? "✓ Mastered" : `(${Math.max(0, skill.targetScore - curScore)}% gap)`}
                                 </span>
                               </div>
                               <ProgressBar

@@ -18,8 +18,8 @@ export default function SkillGaps() {
       <Layout>
         <EmptyState
           title="No assessment results available yet"
-          message="Take the skill assessment first so we can identify your gaps."
-          action={<Button variant="accent" onClick={() => navigate("/assessment")}>Take assessment</Button>}
+          message="Complete roadmap learning until career readiness is above 80%, then take the assessment."
+          action={<Button variant="accent" onClick={() => navigate("/roadmap")}>Open roadmap</Button>}
         />
       </Layout>
     );

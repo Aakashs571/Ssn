@@ -19,7 +19,7 @@ export default function Navbar({ onMenuClick }) {
           </svg>
         </button>
         <Link to="/" className="font-display font-extrabold text-lg text-ink-900">
-          SkillPath <span className="text-teal-600">AI</span>
+          Gap<span className="text-teal-600">Forge</span>
         </Link>
       </div>
 

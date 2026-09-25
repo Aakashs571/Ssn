@@ -50,7 +50,7 @@ export default function Register() {
       {/* Logo / Brand */}
       <div className="auth-brand">
         <Link to="/" className="auth-logo">
-          SkillPath <span>AI</span>
+          Gap<span>Forge</span>
         </Link>
       </div>
 

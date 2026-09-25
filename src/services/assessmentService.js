@@ -1,6 +1,6 @@
 import { assessmentQuestions, questionBank } from "../data/assessmentQuestions";
-import { scoreAssessment } from "../utils/skillCalculations";
-import { mockDelay } from "./api";
+import { scoreAssessment, ASSESSMENT_UNLOCK_THRESHOLD } from "../utils/skillCalculations";
+import { apiGet, apiPost, mockDelay } from "./api";
 
 const ATTEMPTS_STORAGE_KEY = "skillpath_question_attempts";
 
@@ -13,7 +13,7 @@ export function getLocalAttemptHistory() {
   }
 }
 
-export function recordLocalAttempt(questionId, isCorrect, skillId, difficulty) {
+export function recordLocalAttempt(questionId, isCorrect, skillId, difficulty, userAnswer = null, timeSpentSeconds = null) {
   try {
     const history = getLocalAttemptHistory();
     const entry = {
@@ -21,10 +21,23 @@ export function recordLocalAttempt(questionId, isCorrect, skillId, difficulty) {
       isCorrect,
       skillId,
       difficulty,
+      userAnswer,
+      timeSpentSeconds,
       timestamp: new Date().toISOString(),
     };
     const updated = [entry, ...history.filter((h) => h.questionId !== questionId)];
     localStorage.setItem(ATTEMPTS_STORAGE_KEY, JSON.stringify(updated));
+
+    // Async sync to SQLite database
+    apiPost("/assessment/attempt", {
+      questionId,
+      skillId,
+      difficulty,
+      userAnswer,
+      isCorrect,
+      timeSpentSeconds,
+    }).catch(() => {});
+
     return updated;
   } catch {
     return [];
@@ -47,7 +60,6 @@ export async function fetchAssessment(careerId, options = {}) {
 
   if (excludeAttempted && attemptedIds.size > 0) {
     const unattempted = questions.filter((q) => !attemptedIds.has(q.id));
-    // If all questions were attempted, reset or return fresh pool
     if (unattempted.length >= 4) {
       questions = unattempted;
     }
@@ -99,18 +111,67 @@ export async function getAdaptiveNextQuestion(currentQuestion, isCorrect, attemp
   });
 }
 
-// Submit answers and score
-export async function submitAssessment(careerId, answers) {
+// Submit answers, calculate scores, and persist to SQLite
+export async function submitAssessment(careerId, answers, metrics = {}) {
   const questions = assessmentQuestions[careerId] || questionBank;
   const scores = scoreAssessment(questions, answers);
+
+  let correctCount = 0;
+  let totalCount = 0;
 
   // Record attempts for answered questions
   questions.forEach((q) => {
     if (answers[q.id] !== undefined) {
+      totalCount++;
       const isCorrect = answers[q.id] === q.correct;
-      recordLocalAttempt(q.id, isCorrect, q.skillId, q.difficulty);
+      if (isCorrect) correctCount++;
+      recordLocalAttempt(q.id, isCorrect, q.skillId, q.difficulty, answers[q.id]);
     }
   });
+
+  // Calculate overall percentage score
+  const overallScore = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+
+  // Persist session to SQLite
+  try {
+    await apiPost("/assessment/session", {
+      careerId,
+      score: overallScore,
+      totalQuestions: totalCount,
+      correctCount,
+      attentionScore: metrics.attentionScore ?? 100,
+      keystrokeConfidence: metrics.keystrokeConfidence ?? 100,
+      nlpScore: metrics.nlpScore ?? null,
+      bktMastery: metrics.bktMastery ?? null,
+      originalityScore: metrics.originalityScore ?? 100,
+      tabSwitches: metrics.tabSwitches ?? 0,
+      passed: overallScore > ASSESSMENT_UNLOCK_THRESHOLD ? 1 : 0,
+    });
+
+    const metricBundle = {
+      attentionScore: metrics.attentionScore ?? 100,
+      keystrokeConfidence: metrics.keystrokeConfidence ?? 100,
+      originalityScore: metrics.originalityScore ?? 100,
+      bktMastery: metrics.bktMastery ?? null,
+      tabSwitches: metrics.tabSwitches ?? 0,
+      fullscreenExits: metrics.fullscreenExits ?? 0,
+      pasteCount: metrics.pasteCount ?? 0,
+      extraPersonFlags: metrics.extraPersonFlags ?? 0,
+    };
+    const metricTypes = [
+      ["gaze_attention", { attentionScore: metricBundle.attentionScore, extraPersonFlags: metricBundle.extraPersonFlags }],
+      ["keystroke_dynamics", { keystrokeConfidence: metricBundle.keystrokeConfidence }],
+      ["code_originality", { originalityScore: metricBundle.originalityScore, pasteCount: metricBundle.pasteCount }],
+      ["bkt_state", { bktMastery: metricBundle.bktMastery, score: overallScore }],
+    ];
+    await Promise.all(
+      metricTypes.map(([metricType, data]) =>
+        apiPost("/ai-metrics", { metricType, data }).catch(() => null)
+      )
+    );
+  } catch (e) {
+    console.warn("Could not persist assessment session to SQLite:", e);
+  }
 
   return mockDelay(scores);
 }

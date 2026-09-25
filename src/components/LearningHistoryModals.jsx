@@ -1,93 +1,90 @@
 import { useState } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
+import { parseGitHubInput, fetchStudentGitHubData } from "../services/githubService";
+import { validateCertificateFile } from "../utils/certificateValidator";
 
 /**
  * SyncGitHubModal:
- * "Learning history adding projects should be only after syncing from GitHub profile."
- * Fetches/imports public repos from GitHub with technologies and stars.
+ * Allows student to enter:
+ * - GitHub Profile URL (e.g. https://github.com/sidharth)
+ * - GitHub Repository URL (e.g. https://github.com/sidharth/portfolio)
+ * - Username or handle (e.g. @sidharth or sidharth)
  */
 export function SyncGitHubModal({ isOpen, onClose, onSync }) {
-  const [username, setUsername] = useState("");
+  const [inputVal, setInputVal] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewRepos, setPreviewRepos] = useState(null);
+  const [syncSuccess, setSyncSuccess] = useState(false);
 
   const handleFetch = async () => {
-    const cleanUser = username.trim().replace(/^@/, "");
-    if (!cleanUser) {
-      setError("Please enter your GitHub username.");
+    if (!inputVal.trim()) {
+      setError("Please enter your GitHub profile URL, repository URL, or username.");
       return;
     }
     setError("");
     setLoading(true);
 
     try {
-      // Attempt real public GitHub API fetch first
-      const res = await fetch(`https://api.github.com/users/${encodeURIComponent(cleanUser)}/repos?sort=updated&per_page=6`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          const formatted = data.map((r) => ({
-            name: r.name,
-            description: r.description || "GitHub repository",
-            language: r.language || "JavaScript",
-            stars: r.stargazers_count,
-            forks: r.forks_count,
-            html_url: r.html_url,
-            updated_at: r.updated_at,
-          }));
-          setPreviewRepos(formatted);
-          setLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Fallback to simulated GitHub profile sync if API rate limited or offline
-    }
-
-    // High-fidelity fallback repositories for the entered username
-    setTimeout(() => {
-      setPreviewRepos([
-        {
-          name: `${cleanUser}-web-app`,
-          description: "Full-stack web application with responsive UI and authenticated API backend.",
-          language: "JavaScript",
-          stars: 4,
-          forks: 1,
-          html_url: `https://github.com/${cleanUser}/${cleanUser}-web-app`,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          name: "portfolio-interactive",
-          description: "Interactive portfolio and dashboard with data visualization components.",
-          language: "React",
-          stars: 8,
-          forks: 2,
-          html_url: `https://github.com/${cleanUser}/portfolio-interactive`,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          name: "rest-api-service",
-          description: "Microservice backend with database connection, schema validation, and unit tests.",
-          language: "Node.js",
-          stars: 3,
-          forks: 0,
-          html_url: `https://github.com/${cleanUser}/rest-api-service`,
-          updated_at: new Date().toISOString(),
-        },
-      ]);
+      const data = await fetchStudentGitHubData(inputVal);
+      setPreviewRepos(data.repos);
+    } catch (err) {
+      setError(err.message || "Failed to fetch GitHub repositories.");
+    } finally {
       setLoading(false);
-    }, 700);
+    }
+  };
+
+  const handleDirectSync = async (overrideInput) => {
+    const raw = overrideInput || inputVal;
+    if (!raw.trim()) {
+      setError("Please enter your GitHub profile URL, repository URL, or username.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+
+    try {
+      const data = await fetchStudentGitHubData(raw);
+      if (data && data.repos && data.repos.length > 0) {
+        onSync(data.username, data.repos);
+        setSyncSuccess(true);
+        setTimeout(() => {
+          setSyncSuccess(false);
+          setPreviewRepos(null);
+          setInputVal("");
+          onClose();
+        }, 1000);
+      } else {
+        setError("No public repositories could be found for this input.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to sync GitHub profile.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirmImport = () => {
     if (!previewRepos || previewRepos.length === 0) return;
-    onSync(username.trim().replace(/^@/, ""), previewRepos);
-    setPreviewRepos(null);
-    setUsername("");
-    onClose();
+    const { username } = parseGitHubInput(inputVal);
+    const cleanUser = username || "developer";
+    onSync(cleanUser, previewRepos);
+    setSyncSuccess(true);
+    setTimeout(() => {
+      setSyncSuccess(false);
+      setPreviewRepos(null);
+      setInputVal("");
+      onClose();
+    }, 1000);
   };
+
+  const sampleUrls = [
+    { label: "@alexrivers", val: "alexrivers" },
+    { label: "https://github.com/octocat", val: "https://github.com/octocat" },
+    { label: "https://github.com/facebook/react", val: "https://github.com/facebook/react" },
+  ];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Sync Projects from GitHub Profile">
@@ -95,34 +92,64 @@ export function SyncGitHubModal({ isOpen, onClose, onSync }) {
         <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-900 leading-relaxed flex items-start gap-2.5">
           <span className="text-base">🐙</span>
           <div>
-            <span className="font-bold block">Verified Portfolio Policy</span>
+            <span className="font-bold block">GitHub Profile &amp; Repo Sync</span>
             <p className="mt-0.5">
-              To verify practical coding ability, projects must be synced directly from your GitHub profile. Repositories will be indexed to calculate your practical skill evidence.
+              Paste your <strong>GitHub profile URL</strong> (e.g. <code>https://github.com/username</code>), a <strong>repository URL</strong>, or your username. Repositories will be validated and imported directly to your profile.
             </p>
           </div>
         </div>
 
         {error && <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{error}</p>}
 
+        {syncSuccess && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold flex items-center gap-2">
+            <span>✓</span>
+            <span>Successfully synced repositories to your student learning profile!</span>
+          </div>
+        )}
+
         <div>
           <label className="block text-xs font-bold text-ink-800 uppercase tracking-wider mb-1">
-            GitHub Username or Profile Handle *
+            GitHub URL or Username *
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <span className="absolute left-3 top-2.5 text-ink-400 font-mono text-sm">@</span>
+              <span className="absolute left-3 top-2.5 text-ink-400 font-mono text-xs">🔗</span>
               <input
                 type="text"
-                placeholder="e.g. yourname or octocat"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleFetch()}
-                className="w-full border border-line rounded-lg pl-8 pr-3 py-2 text-sm focus-ring bg-white font-mono"
+                placeholder="https://github.com/username or @username"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleDirectSync()}
+                className="w-full border border-line rounded-lg pl-8 pr-3 py-2 text-sm focus-ring bg-white font-mono text-ink-900"
               />
             </div>
-            <Button variant="primary" size="sm" onClick={handleFetch} disabled={loading}>
-              {loading ? "Searching..." : "Fetch Repos"}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFetch}
+              disabled={loading || syncSuccess}
+            >
+              {loading ? "Checking..." : "Preview"}
             </Button>
+          </div>
+
+          {/* Quick example URL suggestions */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span className="text-[10px] text-ink-400 font-semibold">Examples:</span>
+            {sampleUrls.map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => {
+                  setInputVal(s.val);
+                  handleDirectSync(s.val);
+                }}
+                className="text-[10px] px-2 py-0.5 rounded-full bg-paper hover:bg-teal-50 hover:text-teal-700 border border-line transition-colors font-mono"
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -154,25 +181,37 @@ export function SyncGitHubModal({ isOpen, onClose, onSync }) {
                 </div>
               ))}
             </div>
-
-            <div className="pt-2 flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setPreviewRepos(null)}>
-                Clear
-              </Button>
-              <Button variant="accent" size="sm" onClick={handleConfirmImport}>
-                Import {previewRepos.length} Projects to Profile →
-              </Button>
-            </div>
           </div>
         )}
 
-        {!previewRepos && (
-          <div className="pt-2 border-t border-line flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              Cancel
+        {/* Modal Actions */}
+        <div className="pt-3 border-t border-line flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={loading || syncSuccess}>
+            Cancel
+          </Button>
+
+          {previewRepos ? (
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={handleConfirmImport}
+              disabled={loading || syncSuccess}
+            >
+              {loading ? "Importing..." : `Import ${previewRepos.length} Projects to Profile →`}
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={() => handleDirectSync()}
+              disabled={loading || syncSuccess || !inputVal.trim()}
+              className="flex items-center gap-1.5"
+            >
+              <span>🐙</span>
+              <span>{loading ? "Syncing..." : "Sync & Import Repositories →"}</span>
+            </Button>
+          )}
+        </div>
       </div>
     </Modal>
   );
@@ -206,12 +245,24 @@ export function AddCourseModal({ isOpen, onClose, onAdd }) {
     setError("");
     setPdfFile(file);
     setVerifying(true);
+    setVerifiedPdf(false);
 
-    // Simulate AI Certificate Verification check
-    setTimeout(() => {
-      setVerifying(false);
-      setVerifiedPdf(true);
-    }, 1000);
+    validateCertificateFile(file)
+      .then((res) => {
+        setVerifying(false);
+        if (res.valid) {
+          setVerifiedPdf(true);
+          setError("");
+        } else {
+          setVerifiedPdf(false);
+          setError(res.reason || "The uploaded certificate is invalid or appears blank.");
+        }
+      })
+      .catch((err) => {
+        setVerifying(false);
+        setVerifiedPdf(false);
+        setError("Failed to verify certificate: " + (err.message || "Unknown error"));
+      });
   };
 
   const handleSubmit = (e) => {
@@ -379,11 +430,24 @@ export function AddCertificationModal({ isOpen, onClose, onAdd }) {
     setError("");
     setPdfFile(file);
     setVerifying(true);
+    setVerifiedPdf(false);
 
-    setTimeout(() => {
-      setVerifying(false);
-      setVerifiedPdf(true);
-    }, 900);
+    validateCertificateFile(file)
+      .then((res) => {
+        setVerifying(false);
+        if (res.valid) {
+          setVerifiedPdf(true);
+          setError("");
+        } else {
+          setVerifiedPdf(false);
+          setError(res.reason || "The uploaded certification document is invalid or empty.");
+        }
+      })
+      .catch((err) => {
+        setVerifying(false);
+        setVerifiedPdf(false);
+        setError("Failed to verify certification: " + (err.message || "Unknown error"));
+      });
   };
 
   const handleSubmit = (e) => {

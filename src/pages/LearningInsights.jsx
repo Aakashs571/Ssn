@@ -81,7 +81,7 @@ export default function LearningInsights() {
       {!insights ? (
         <EmptyState
           title="No learning data recorded yet"
-          message="Welcome to SkillPath AI! Complete your first topic lesson or take a quiz to see your personalized AI recommendations here."
+          message="Welcome to GapForge! Complete your first topic lesson or take a quiz to see your personalized AI recommendations here."
           action={
             <Button variant="accent" onClick={() => navigate("/roadmap")}>
               Go to Roadmap & Start Learning →

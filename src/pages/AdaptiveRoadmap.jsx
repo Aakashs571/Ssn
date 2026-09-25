@@ -37,15 +37,18 @@ export default function AdaptiveRoadmap() {
     setCreditModalOpen(true);
   };
 
-  const handleCreditCourse = ({ skillId, skillName, courseTitle, platform, score, certificateUrl }) => {
+  const handleCreditCourse = ({ skillId, skillName, courseTitle, platform, score, certificateFile, verified }) => {
+    const title = courseTitle || `${skillName} Verified Certificate (${platform})`;
+    const awardScore = Number(score) || 95;
     const newCourse = {
       id: `ext_${Date.now()}`,
       skillId,
       skillName,
-      courseTitle,
+      courseTitle: title,
       platform,
-      scoreAwarded: score,
-      certificateUrl,
+      scoreAwarded: awardScore,
+      certificateFile: certificateFile || "Verified_Certificate.pdf",
+      verified: true,
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     };
 
@@ -56,7 +59,7 @@ export default function AdaptiveRoadmap() {
     const existingSkillIndex = updatedSkills.findIndex((s) => s.id === skillId);
     if (existingSkillIndex >= 0) {
       const current = updatedSkills[existingSkillIndex];
-      const newScore = Math.max(current.currentScore, score);
+      const newScore = Math.min(100, Math.max(current.currentScore, awardScore));
       updatedSkills[existingSkillIndex] = {
         ...current,
         currentScore: newScore,
@@ -70,9 +73,9 @@ export default function AdaptiveRoadmap() {
         id: skillId,
         name: skillName,
         category: "specialized",
-        currentScore: score,
+        currentScore: Math.min(100, Math.max(0, awardScore)),
         requiredScore: 75,
-        history: [{ source: "external_course", score, note: courseTitle, platform, date: new Date().toISOString() }],
+        history: [{ source: "external_course", score: Math.min(100, Math.max(0, awardScore)), note: courseTitle, platform, date: new Date().toISOString() }],
       });
     }
 
@@ -81,7 +84,7 @@ export default function AdaptiveRoadmap() {
       skills: updatedSkills,
     });
 
-    setToastMessage(`✓ Credited outside course "${courseTitle}"!`);
+    setToastMessage(`✓ Credited verified certificate for "${title}"!`);
     setTimeout(() => setToastMessage(""), 5000);
   };
 

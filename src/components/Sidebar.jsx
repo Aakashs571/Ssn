@@ -35,7 +35,7 @@ export default function Sidebar({ open, onClose }) {
         {/* Brand Header */}
         <div className="h-16 flex items-center px-6 border-b border-line shrink-0">
           <Link to="/dashboard" onClick={onClose} className="font-display font-extrabold text-ink-900 text-lg">
-            SkillPath <span className="text-teal-600">AI</span>
+            Gap<span className="text-teal-600">Forge</span>
           </Link>
         </div>
 

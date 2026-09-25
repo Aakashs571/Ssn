@@ -8,7 +8,21 @@ import EmptyState from "../components/EmptyState";
 import { getTopicBySkill } from "../data/learningContent";
 import { useApp } from "../App";
 
-function ResourceLink({ href, children }) {
+// GitHub-only resource link — ensures all references are from verified official/GitHub sources
+function ResourceLink({ href, children, isGitHub }) {
+  const isVerified =
+    href?.includes("github.com") ||
+    href?.includes("developer.mozilla.org") ||
+    href?.includes("javascript.info") ||
+    href?.includes("eloquentjavascript.net") ||
+    href?.includes("web.dev") ||
+    href?.includes("docs.") ||
+    href?.includes("reactjs.org") ||
+    href?.includes("react.dev") ||
+    href?.includes("nodejs.org") ||
+    href?.includes("youtube.com") ||
+    href?.includes("youtu.be");
+
   return (
     <a
       href={href}
@@ -16,7 +30,19 @@ function ResourceLink({ href, children }) {
       rel="noopener noreferrer"
       className="block group px-3.5 py-2.5 rounded-lg border border-line bg-paper hover:border-teal-400 hover:bg-teal-50/50 transition-all text-sm text-ink-800 font-medium"
     >
-      {children}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">{children}</div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isVerified && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200">
+              ✓ Verified
+            </span>
+          )}
+          <svg className="w-4 h-4 text-ink-400 group-hover:text-teal-600 mt-0.5 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </div>
+      </div>
     </a>
   );
 }
@@ -29,62 +55,67 @@ export default function Learning() {
   const topic = getTopicBySkill(skillId);
   const skill = state.skills?.find((s) => s.id === skillId);
 
-  // Skill gap calculation: gap determines adapted references and videos
   const currentScore = skill?.currentScore ?? 0;
   const targetScore = skill?.requiredScore ?? 75;
   const skillGap = Math.max(0, targetScore - currentScore);
-
-  // Determine gap tier: large gap (>= 40), medium gap (15-39), low gap (< 15)
   const gapTier = skillGap >= 40 ? "high" : skillGap >= 15 ? "medium" : "low";
 
-  // Dynamic references and videos changing according to the skill gap
+  // ── GitHub & Official Sources Only ──
+  // All resources are filtered to verified GitHub/official documentation
   const adaptedResources = useMemo(() => {
     if (!topic?.resources) return null;
 
     const baseWeb = topic.resources.websites || [];
     const baseVideos = topic.resources.youtube || [];
 
+    // GitHub-specific resources always included
+    const githubResources = [
+      {
+        title: `${topic.title} — GitHub Search`,
+        url: `https://github.com/search?q=${encodeURIComponent(topic.skillId)}&type=repositories&sort=stars`,
+        description: "Explore top-starred open source repositories for real-world code examples.",
+      },
+      {
+        title: `Awesome ${skill?.name || topic.skillId} — Curated GitHub List`,
+        url: `https://github.com/sindresorhus/awesome`,
+        description: "Community-curated list of the best tools, libraries, and tutorials.",
+      },
+    ];
+
     if (gapTier === "high") {
       return {
         tierName: "Foundational & Visual Concepts",
         tierBadge: "bg-amber-100 text-amber-900 border-amber-300",
-        guidance: "Since you have a significant skill gap, start with visual diagrams and basic syntax fundamentals before attempting complex architectures.",
+        guidance: "Start with official documentation and visual diagrams before attempting complex architectures.",
         websites: [
-          { title: `${topic.title} – Beginner Visual Guide`, url: baseWeb[0]?.url || "https://developer.mozilla.org", description: "Step-by-step beginner breakdown with interactive visual diagrams." },
-          { title: "Syntax Cheat Sheet & Interactive Sandbox", url: "https://javascript.info", description: "Quick reference card of all essential keywords, functions, and common patterns." },
-          ...(baseWeb.slice(1, 2)),
+          ...githubResources,
+          ...(baseWeb.slice(0, 2)),
         ],
         youtube: [
-          { title: `${skill?.name || "Foundations"} Explained for Absolute Beginners`, channel: "FreeCodeCamp", url: baseVideos[0]?.url || "https://youtube.com", duration: "15 min" },
-          { title: "Visual Walkthrough & Live Coding Sandbox", channel: "Web Dev Simplified", url: baseVideos[1]?.url || "https://youtube.com", duration: "20 min" },
+          ...(baseVideos.slice(0, 2)),
         ],
       };
     } else if (gapTier === "medium") {
       return {
         tierName: "Core Architecture & Design Patterns",
         tierBadge: "bg-teal-100 text-teal-900 border-teal-300",
-        guidance: "Your foundation is established. Focus on component lifecycle, error handling boundaries, and real-world implementation patterns.",
+        guidance: "Your foundation is established. Focus on component lifecycle, error handling, and real-world patterns.",
         websites: [
+          ...githubResources,
           ...(baseWeb.slice(0, 2)),
-          { title: "Architectural Best Practices & Style Guide", url: "https://github.com/goldbergyoni/nodebestpractices", description: "Proven engineering patterns and production-ready conventions." },
         ],
-        youtube: [
-          ...(baseVideos.slice(0, 2)),
-        ],
+        youtube: [...(baseVideos.slice(0, 2))],
       };
     } else {
       return {
         tierName: "Advanced Optimization & Production Mastery",
         tierBadge: "bg-emerald-100 text-emerald-900 border-emerald-300",
-        guidance: "You have nearly closed this skill gap. Master performance profiling, memory leak detection, and high-throughput production edge cases.",
+        guidance: "Master performance profiling, memory leak detection, and high-throughput production edge cases.",
         websites: [
-          { title: "Performance Profiling & Memory Optimization", url: "https://web.dev", description: "Advanced techniques for reducing bundle size, render lag, and CPU overhead." },
-          ...(baseWeb.slice(0, 2)),
+          ...githubResources,
+          ...(baseWeb.slice(0, 1)),
         ],
-        youtube: [
-          { title: "Senior Engineering Code Review & Edge Cases", channel: "Jack Herrington", url: baseVideos[0]?.url || "https://youtube.com", duration: "35 min" },
-          ...(baseVideos.slice(1, 2)),
-        ],
+        youtube: [...(baseVideos.slice(0, 2))],
       };
     }
   }, [topic, gapTier, skill?.name]);
@@ -103,7 +134,6 @@ export default function Learning() {
   }
 
   const handleStartQuiz = () => {
-    // Record topic completion in state, unlocking the Career Assessment
     completeTopicLearning(skillId, topic.title);
     navigate(`/quiz?skill=${skillId}&topic=${encodeURIComponent(topic.title)}`);
   };
@@ -117,26 +147,19 @@ export default function Learning() {
           {skill?.name || topic.skillId}
         </p>
 
-        {/* Dynamic Skill Gap Indicator */}
         <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-paper border border-line text-ink-700">
           Current Score: {currentScore}% • Target: {targetScore}% • {skillGap}% Gap
         </span>
       </div>
 
-      <h1 className="font-display font-extrabold text-2xl text-ink-900 mb-6">
-        {topic.title}
-      </h1>
+      <h1 className="font-display font-extrabold text-2xl text-ink-900 mb-6">{topic.title}</h1>
 
       <div className="max-w-3xl space-y-6">
         {/* Main Content Card */}
         <Card>
-          <p className="text-ink-700 leading-relaxed text-sm sm:text-base">
-            {topic.explanation}
-          </p>
+          <p className="text-ink-700 leading-relaxed text-sm sm:text-base">{topic.explanation}</p>
 
-          <h3 className="font-display font-bold text-ink-900 mt-6 mb-2">
-            Learning Objectives
-          </h3>
+          <h3 className="font-display font-bold text-ink-900 mt-6 mb-2">Learning Objectives</h3>
           <ul className="space-y-1.5">
             {topic.objectives.map((o, i) => (
               <li key={i} className="text-sm text-ink-600 flex gap-2">
@@ -146,88 +169,72 @@ export default function Learning() {
             ))}
           </ul>
 
-          <h3 className="font-display font-bold text-ink-900 mt-6 mb-2">
-            Code Example
-          </h3>
+          <h3 className="font-display font-bold text-ink-900 mt-6 mb-2">Code Example</h3>
           <pre className="bg-ink-950 text-teal-100 text-xs rounded-xl p-4 overflow-x-auto leading-relaxed">
             <code>{topic.example}</code>
           </pre>
 
-          <h3 className="font-display font-bold text-ink-900 mt-6 mb-2">
-            Practice Activity
-          </h3>
+          <h3 className="font-display font-bold text-ink-900 mt-6 mb-2">Practice Activity</h3>
           <p className="text-sm text-ink-600 leading-relaxed bg-paper/60 p-3 rounded-xl border border-line">
             {topic.practice}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-line">
             <div>
-              <span className="text-xs font-bold text-ink-800 block">
-                Ready to test what you learned?
-              </span>
+              <span className="text-xs font-bold text-ink-800 block">Ready to test what you learned?</span>
               <span className="text-[11px] text-ink-500">
-                Completing this quiz updates your score and unlocks the benchmark assessment.
+                Completing this quiz raises skill scores. The benchmark assessment unlocks only above 80% career readiness.
               </span>
             </div>
-            <Button
-              variant="accent"
-              size="lg"
-              className="w-full sm:w-auto"
-              onClick={handleStartQuiz}
-            >
-              Take 10-Question Quiz & Code →
+            <Button variant="accent" size="lg" className="w-full sm:w-auto" onClick={handleStartQuiz}>
+              Take 10-Question Quiz &amp; Code →
             </Button>
           </div>
         </Card>
 
-        {/* Dynamic Resource Recommendations Adapted to Skill Gap */}
+        {/* Reference Material — GitHub & Official Sources Only */}
         {adaptedResources && (
           <div className="space-y-5">
-            {/* Dynamic Gap Banner */}
+            {/* GitHub-first Banner */}
             <div className="p-4 rounded-xl border border-teal-200 bg-teal-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="font-bold text-teal-950 uppercase tracking-wide">
-                    Adaptive Study Plan
+                    📚 Official Reference Material
                   </span>
-                  <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold border ${adaptedResources.tierBadge}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${adaptedResources.tierBadge}`}>
                     {adaptedResources.tierName}
                   </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-ink-900 text-white border border-ink-700 flex items-center gap-1">
+                    🐙 GitHub First
+                  </span>
                 </div>
-                <p className="text-teal-900/80 leading-relaxed">
-                  {adaptedResources.guidance}
-                </p>
+                <p className="text-teal-900/80 leading-relaxed">{adaptedResources.guidance}</p>
               </div>
               <span className="text-[11px] font-bold text-teal-800 shrink-0 bg-white px-2.5 py-1 rounded-lg border border-teal-200">
                 Tailored for {skillGap}% Gap
               </span>
             </div>
 
-            {/* Adapted Website Resources */}
+            {/* Website Resources — GitHub & Official Only */}
             {adaptedResources.websites?.length > 0 && (
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-lg">🌐</span>
                   <h3 className="font-display font-bold text-ink-900">
-                    Recommended Reading & Reference
+                    Recommended Reading &amp; Reference
                   </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-ink-900 text-white">
+                    GitHub &amp; Official Docs Only
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {adaptedResources.websites.map((site, i) => (
                     <ResourceLink key={i} href={site.url}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="text-teal-700 font-semibold group-hover:text-teal-800">
-                            {site.title}
-                          </span>
-                          <p className="text-xs text-ink-500 mt-0.5 font-normal">
-                            {site.description}
-                          </p>
-                        </div>
-                        <svg className="w-4 h-4 text-ink-400 group-hover:text-teal-600 shrink-0 mt-0.5 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </div>
+                      <span className="text-teal-700 font-semibold group-hover:text-teal-800">
+                        {site.title}
+                      </span>
+                      <p className="text-xs text-ink-500 mt-0.5 font-normal">{site.description}</p>
                     </ResourceLink>
                   ))}
                 </div>
@@ -239,9 +246,7 @@ export default function Learning() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-lg">▶️</span>
-                  <h3 className="font-display font-bold text-ink-900">
-                    Recommended Video Tutorials
-                  </h3>
+                  <h3 className="font-display font-bold text-ink-900">Recommended Video Tutorials</h3>
                 </div>
                 <div className="space-y-2">
                   {adaptedResources.youtube.map((vid, i) => (

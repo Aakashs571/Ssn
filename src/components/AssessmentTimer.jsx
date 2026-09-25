@@ -4,8 +4,6 @@ export default function AssessmentTimer({
   duration = 45,
   onTimeUp,
   questionKey,
-  isPaused = false,
-  onTogglePause,
 }) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const onTimeUpRef = useRef(onTimeUp);
@@ -16,15 +14,12 @@ export default function AssessmentTimer({
     setTimeLeft(duration);
   }, [questionKey, duration]);
 
-  // Countdown timer loop
+  // Countdown timer loop — no pause functionality
   useEffect(() => {
-    if (isPaused) return;
-
     const intervalId = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(intervalId);
-          // Safely call onTimeUp outside the React render cycle
           setTimeout(() => {
             onTimeUpRef.current?.();
           }, 0);
@@ -35,11 +30,10 @@ export default function AssessmentTimer({
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [questionKey, isPaused]);
+  }, [questionKey]);
 
   const percentage = Math.max(0, Math.min(100, (timeLeft / duration) * 100));
 
-  // Determine urgency color
   const isUrgent = timeLeft <= 8;
   const isWarning = timeLeft <= 15 && !isUrgent;
 
@@ -88,27 +82,6 @@ export default function AssessmentTimer({
           style={{ width: `${percentage}%` }}
         />
       </div>
-
-      {/* Optional Pause / Resume Button */}
-      {onTogglePause && (
-        <button
-          type="button"
-          onClick={onTogglePause}
-          className="text-ink-500 hover:text-ink-900 transition-colors p-1 rounded hover:bg-black/5"
-          title={isPaused ? "Resume timer" : "Pause timer"}
-          aria-label={isPaused ? "Resume timer" : "Pause timer"}
-        >
-          {isPaused ? (
-            <svg className="w-4 h-4 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zM12.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z" />
-            </svg>
-          )}
-        </button>
-      )}
     </div>
   );
 }

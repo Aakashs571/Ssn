@@ -103,3 +103,9 @@ $RECYCLE.BIN/
 
 # Linux
 *~
+
+# Scratch & Local Databases
+scratch/
+*.db
+*.db-shm
+*.db-wal

@@ -9,6 +9,7 @@ import CareerRoadmapExplorer from "../components/CareerRoadmapExplorer";
 import AddOutsideCourseModal from "../components/AddOutsideCourseModal";
 import { generateRoadmap } from "../services/roadmapService";
 import { getCareerById } from "../data/careers";
+import { getCareerReadinessScore, ASSESSMENT_UNLOCK_THRESHOLD } from "../utils/skillCalculations";
 import { useApp } from "../App";
 
 export default function Roadmap() {
@@ -40,6 +41,12 @@ export default function Roadmap() {
   };
 
   const handleStartAssessment = (careerId) => {
+    const targetCareer = getCareerById(careerId);
+    const readiness = getCareerReadinessScore(state.skills || [], targetCareer);
+    if (readiness <= ASSESSMENT_UNLOCK_THRESHOLD) {
+      navigate("/assessment"); // will display prerequisite locked screen explaining >80% requirement
+      return;
+    }
     update({ selectedCareer: careerId });
     navigate("/assessment");
   };
@@ -49,15 +56,18 @@ export default function Roadmap() {
     setIsCreditModalOpen(true);
   };
 
-  const handleCreditCourse = ({ skillId, skillName, courseTitle, platform, score, certificateUrl }) => {
+  const handleCreditCourse = ({ skillId, skillName, courseTitle, platform, score, certificateFile, verified }) => {
+    const title = courseTitle || `${skillName} Verified Certificate (${platform})`;
+    const awardScore = Number(score) || 95;
     const newCourse = {
       id: `ext_${Date.now()}`,
       skillId,
       skillName,
-      courseTitle,
+      courseTitle: title,
       platform,
-      scoreAwarded: score,
-      certificateUrl,
+      scoreAwarded: awardScore,
+      certificateFile: certificateFile || "Verified_Certificate.pdf",
+      verified: true,
       date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     };
 
@@ -70,7 +80,7 @@ export default function Roadmap() {
     const existingSkillIndex = updatedSkills.findIndex((s) => s.id === skillId);
     if (existingSkillIndex >= 0) {
       const current = updatedSkills[existingSkillIndex];
-      const newScore = Math.max(current.currentScore, score);
+      const newScore = Math.min(100, Math.max(current.currentScore, score));
       updatedSkills[existingSkillIndex] = {
         ...current,
         currentScore: newScore,
@@ -87,8 +97,8 @@ export default function Roadmap() {
         name: rs.name,
         category: rs.category,
         requiredScore: rs.requiredScore,
-        currentScore: rs.skillId === skillId ? score : 35,
-        history: [{ source: rs.skillId === skillId ? "external_course" : "baseline", score: rs.skillId === skillId ? score : 35 }],
+        currentScore: rs.skillId === skillId ? Math.min(100, Math.max(0, score)) : 35,
+        history: [{ source: rs.skillId === skillId ? "external_course" : "baseline", score: rs.skillId === skillId ? Math.min(100, Math.max(0, score)) : 35 }],
       }));
     }
 
@@ -98,7 +108,7 @@ export default function Roadmap() {
       selectedCareer: state.selectedCareer || activeCareerId,
     });
 
-    setCreditToast(`✓ Credited "${courseTitle}"! Your ${skillName} score is now ${score}%.`);
+    setCreditToast(`✓ Credited verified certificate for "${title}"! Your ${skillName} score is now ${awardScore}%.`);
     setTimeout(() => setCreditToast(""), 6000);
   };
 

@@ -1,11 +1,11 @@
-// Canonical formulas for SkillPath AI's adaptive loop.
+// Canonical formulas for GapForge's adaptive loop.
 // Every page (SkillGaps, Roadmap, Quiz, RealWorldTask, CareerReadiness,
 // AdaptiveRoadmap, Dashboard) reads through these so a score updates
 // consistently everywhere it's used.
 
 export const clampScore = (n) => Math.max(0, Math.min(100, Math.round(n)));
 
-export const getGap = (skill) => Math.max(0, skill.requiredScore - skill.currentScore);
+export const getGap = (skill) => Math.max(0, (skill.requiredScore || 0) - clampScore(skill.currentScore || 0));
 
 // Assessment -> initial skill score.
 // score = (sum of difficulty weight of correct answers) / (sum of all weights) * 100
@@ -29,8 +29,9 @@ export function scoreAssessment(questions, answers) {
 // A quiz can move a skill by at most `sensitivity` of the distance to the new evidence.
 const QUIZ_SENSITIVITY = 0.4;
 export function applyQuizResult(oldScore, correctCount, totalCount) {
-  const accuracy = totalCount > 0 ? (correctCount / totalCount) * 100 : oldScore;
-  const updated = oldScore + (accuracy - oldScore) * QUIZ_SENSITIVITY;
+  const safeOld = clampScore(oldScore || 0);
+  const accuracy = totalCount > 0 ? (correctCount / totalCount) * 100 : safeOld;
+  const updated = safeOld + (accuracy - safeOld) * QUIZ_SENSITIVITY;
   return clampScore(updated);
 }
 
@@ -38,7 +39,8 @@ export function applyQuizResult(oldScore, correctCount, totalCount) {
 // Tasks are stronger evidence than quizzes, so they carry more weight.
 const TASK_SENSITIVITY = 0.6;
 export function applyTaskResult(oldScore, taskScorePercent) {
-  const updated = oldScore + (taskScorePercent - oldScore) * TASK_SENSITIVITY;
+  const safeOld = clampScore(oldScore || 0);
+  const updated = safeOld + (taskScorePercent - safeOld) * TASK_SENSITIVITY;
   return clampScore(updated);
 }
 
@@ -80,7 +82,9 @@ export function calculateReadiness(skills) {
   if (!skills.length) return 0;
   const totalWeight = skills.length;
   const sum = skills.reduce((acc, s) => {
-    const achieved = Math.min(s.currentScore, s.requiredScore) / s.requiredScore;
+    const cur = clampScore(s.currentScore || 0);
+    const req = clampScore(s.requiredScore || 100);
+    const achieved = req > 0 ? Math.min(cur, req) / req : 1;
     return acc + achieved;
   }, 0);
   return clampScore((sum / totalWeight) * 100);
@@ -88,7 +92,7 @@ export function calculateReadiness(skills) {
 
 // "What If?" simulator: recompute readiness with one skill's score swapped.
 export function simulateReadiness(skills, skillId, hypotheticalScore) {
-  const modified = skills.map((s) => (s.id === skillId ? { ...s, currentScore: hypotheticalScore } : s));
+  const modified = skills.map((s) => (s.id === skillId ? { ...s, currentScore: clampScore(hypotheticalScore) } : s));
   return calculateReadiness(modified);
 }
 
@@ -99,3 +103,36 @@ export function updateSkillScore(skills, skillId, newScore) {
       : s
   );
 }
+
+export function getCareerReadinessScore(skills = [], career = null) {
+  if (!career || !career.requiredSkills || !career.requiredSkills.length) {
+    if (!skills.length) return 0;
+    const sum = skills.reduce((acc, s) => acc + clampScore(s.currentScore || 0), 0);
+    return Math.min(100, Math.round(sum / skills.length));
+  }
+  const skillMap = {};
+  skills.forEach((s) => {
+    skillMap[s.id] = s;
+  });
+
+  let totalScore = 0;
+  career.requiredSkills.forEach((req) => {
+    const userSkill = skillMap[req.skillId];
+    const cur = userSkill ? Math.min(100, Math.max(0, userSkill.currentScore)) : 0;
+    totalScore += cur;
+  });
+
+  return Math.min(100, Math.round(totalScore / career.requiredSkills.length));
+}
+
+export const ASSESSMENT_UNLOCK_THRESHOLD = 80;
+
+/**
+ * Benchmark Assessment Unlock Gate:
+ * Unlocks only when career readiness is strictly above 80% (81+).
+ * 80% and below — including 70% — stays locked.
+ */
+export function isAssessmentUnlocked(skills = [], career = null) {
+  return getCareerReadinessScore(skills, career) > ASSESSMENT_UNLOCK_THRESHOLD;
+}
+

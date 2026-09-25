@@ -27,8 +27,8 @@ export default function CareerReadiness() {
       <Layout>
         <EmptyState
           title="No readiness data yet"
-          message="Complete your diagnostic assessment to see your career readiness index."
-          action={<Button variant="accent" onClick={() => navigate("/assessment")}>Take assessment</Button>}
+          message="Raise career readiness above 80% on the roadmap, then take the benchmark assessment."
+          action={<Button variant="accent" onClick={() => navigate("/roadmap")}>Open roadmap</Button>}
         />
       </Layout>
     );

@@ -32,10 +32,11 @@ const createZeroState = (user = null, token = null) => ({
   certifications: [],    // Zero certifications (only from verified PDF upload)
   activityTimeline: [],  // Zero activity items
   attemptedQuestions: [],
-  topicsCompleted: [],   // Tracks completed learning topics to unlock assessment
+  topicsCompleted: [],   // Completed learning topics (progress only; assessment unlocks above 80%)
   githubConnected: false,
   githubUsername: null,
   githubRepos: [],
+  assessmentCertificate: null, // Stores issued certificate after assessment completion
 });
 
 // Demo state for the standard demo account (Alex Rivers)
@@ -85,6 +86,15 @@ const createDemoState = () => ({
   ],
 });
 
+function sanitizeSkills(skills) {
+  if (!Array.isArray(skills)) return [];
+  return skills.map((s) => ({
+    ...s,
+    currentScore: Math.min(100, Math.max(0, Math.round(Number(s.currentScore) || 0))),
+    requiredScore: Math.min(100, Math.max(0, Math.round(Number(s.requiredScore) || 0))),
+  }));
+}
+
 function getUserStorageKey(email) {
   return `skillpath_user_${(email || "guest").toLowerCase().trim()}`;
 }
@@ -98,6 +108,7 @@ function loadStateForUser(user, token) {
     const rawDemo = localStorage.getItem(getUserStorageKey(email));
     if (!rawDemo) {
       const demoState = createDemoState();
+      demoState.skills = sanitizeSkills(demoState.skills);
       localStorage.setItem(getUserStorageKey(email), JSON.stringify(demoState));
       return demoState;
     }
@@ -107,6 +118,9 @@ function loadStateForUser(user, token) {
     const raw = localStorage.getItem(getUserStorageKey(email));
     if (raw) {
       const parsed = JSON.parse(raw);
+      if (parsed.skills) {
+        parsed.skills = sanitizeSkills(parsed.skills);
+      }
       return {
         ...createZeroState(user, token),
         ...parsed,
@@ -123,15 +137,30 @@ function loadStateForUser(user, token) {
 }
 
 function saveUserState(state) {
-  if (!state || !state.user?.email) return;
+  if (!state) return;
   try {
-    const key = getUserStorageKey(state.user.email);
-    localStorage.setItem(key, JSON.stringify(state));
-    // Also save active session marker
-    localStorage.setItem(
-      CURRENT_SESSION_KEY,
-      JSON.stringify({ email: state.user.email, token: state.authToken })
-    );
+    const email = state.user?.email;
+    const sanitizedState = state.skills ? { ...state, skills: sanitizeSkills(state.skills) } : state;
+    if (email) {
+      const key = getUserStorageKey(email);
+      localStorage.setItem(key, JSON.stringify(sanitizedState));
+      localStorage.setItem(
+        CURRENT_SESSION_KEY,
+        JSON.stringify({ email, token: state.authToken || "session_token" })
+      );
+
+      // Async sync with SQLite database
+      fetch("/api/state", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(state.authToken ? { Authorization: `Bearer ${state.authToken}` } : {}),
+        },
+        body: JSON.stringify({ userId: state.user.id, state: sanitizedState }),
+      }).catch(() => {});
+    } else {
+      localStorage.setItem("skillpath_guest_state", JSON.stringify(sanitizedState));
+    }
   } catch (e) {
     console.error("Error writing user storage:", e);
   }
@@ -146,8 +175,21 @@ function readInitialSession() {
         const rawUserData = localStorage.getItem(getUserStorageKey(email));
         if (rawUserData) {
           const parsed = JSON.parse(rawUserData);
+          if (parsed.skills) {
+            parsed.skills = sanitizeSkills(parsed.skills);
+          }
           return { ...parsed, authToken: token };
         }
+      }
+    }
+    const rawGuest = localStorage.getItem("skillpath_guest_state");
+    if (rawGuest) {
+      const parsedGuest = JSON.parse(rawGuest);
+      if (parsedGuest && typeof parsedGuest === "object") {
+        if (parsedGuest.skills) {
+          parsedGuest.skills = sanitizeSkills(parsedGuest.skills);
+        }
+        return parsedGuest;
       }
     }
   } catch (e) {
@@ -161,14 +203,12 @@ export function useAppState() {
 
   // Auto-persist whenever state changes
   useEffect(() => {
-    if (state.user?.email) {
-      saveUserState(state);
-    }
+    saveUserState(state);
   }, [state]);
 
-  // Validate active session token with backend if present
+  // Validate active session token with backend if present and real
   useEffect(() => {
-    if (state.authToken && !state.user) {
+    if (state.authToken && !state.user && state.authToken !== "session_token" && state.authToken !== "guest_token") {
       getCurrentUser(state.authToken).then((u) => {
         if (u) {
           const loaded = loadStateForUser(u, state.authToken);
@@ -184,6 +224,9 @@ export function useAppState() {
   const update = useCallback((patch) => {
     setState((prev) => {
       const updated = typeof patch === "function" ? patch(prev) : { ...prev, ...patch };
+      if (updated.skills) {
+        updated.skills = sanitizeSkills(updated.skills);
+      }
       return updated;
     });
   }, []);
@@ -227,6 +270,7 @@ export function useAppState() {
     if (demoData?.profile) {
       demo.profile = { ...demo.profile, ...demoData.profile };
     }
+    demo.skills = sanitizeSkills(demo.skills);
     setState(demo);
     saveUserState(demo);
   }, []);
@@ -241,10 +285,10 @@ export function useAppState() {
       if (newCourse.skill) {
         const skillKey = newCourse.skill.toLowerCase().replace(/[^a-z]/g, "");
         const existingIdx = updatedSkills.findIndex((s) => s.id === skillKey || s.name.toLowerCase() === newCourse.skill.toLowerCase());
-        const awardedScore = newCourse.score || 70;
+        const awardedScore = Math.min(100, Math.max(0, newCourse.score || 70));
         if (existingIdx >= 0) {
           const current = updatedSkills[existingIdx];
-          const newScore = Math.max(current.currentScore || 0, awardedScore);
+          const newScore = Math.min(100, Math.max(current.currentScore || 0, awardedScore));
           updatedSkills[existingIdx] = {
             ...current,
             currentScore: newScore,
@@ -382,7 +426,7 @@ export function useAppState() {
     }));
   }, []);
 
-  // Complete a learning topic from roadmap (unlocks Assessment)
+  // Complete a learning topic from the roadmap
   const completeTopicLearning = useCallback((skillId, topicTitle) => {
     setState((prev) => ({
       ...prev,

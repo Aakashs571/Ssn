@@ -1,4 +1,4 @@
-import { buildRoadmap, getGap } from "../utils/skillCalculations";
+import { buildRoadmap, getGap, getCareerReadinessScore } from "../utils/skillCalculations";
 import { getCareerById } from "../data/careers";
 import { mockDelay } from "./api";
 
@@ -21,11 +21,10 @@ export async function buildDashboardSummary(state) {
 
   const roadmap = buildRoadmap(skills);
   
-  // Calculate overall mastery percentage (starts strictly at 0% for new accounts)
+  // Calculate overall mastery percentage (starts strictly at 0% for new accounts, capped at 100%)
   let overallMastery = 0;
   if (hasUserSkills) {
-    const totalScore = state.skills.reduce((acc, s) => acc + (s.currentScore || 0), 0);
-    overallMastery = Math.round(totalScore / state.skills.length);
+    overallMastery = getCareerReadinessScore(state.skills, career);
   }
 
   const topGaps = [...skills]
